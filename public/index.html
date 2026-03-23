@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SnapMsg — Private Messaging</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Emoji Picker Web Component -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+</head>
+<body class="theme-default">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SPLASH SCREEN
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="splash-screen" class="splash-screen">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <div class="splash-icon">💬</div>
+        <h1 class="splash-title">SnapMsg</h1>
+        <p class="splash-subtitle">Private. Fast. Yours.</p>
+      </div>
+      <div class="splash-loader">
+        <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+        <p class="splash-loading-text">Loading...</p>
+      </div>
+    </div>
+    <div class="splash-particles" id="splash-particles"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       AUTH SCREEN
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <div class="auth-bg-animation"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-icon">💬</div>
+        <h1>SnapMsg</h1>
+        <p>Private messaging, no account needed</p>
+      </div>
+      <form id="auth-form" class="auth-form" autocomplete="off">
+        <div class="input-group">
+          <label for="username-input">Username</label>
+          <input
+            type="text"
+            id="username-input"
+            placeholder="e.g. coolkid99"
+            maxlength="24"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span class="input-hint">2–24 characters, letters/numbers/_ only</span>
+        </div>
+        <div class="input-group">
+          <label for="nickname-input">Display Name <span class="optional">(optional)</span></label>
+          <input
+            type="text"
+            id="nickname-input"
+            placeholder="How others see you"
+            maxlength="32"
+            autocomplete="off"
+          />
+        </div>
+        <div class="avatar-color-picker">
+          <label>Pick your color</label>
+          <div class="color-swatches" id="color-swatches"></div>
+        </div>
+        <button type="submit" class="btn-primary btn-large" id="auth-submit">
+          <span>Enter Chat</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <p class="auth-error hidden" id="auth-error"></p>
+      </form>
+      <p class="auth-footer">No passwords. No tracking. Messages reset when server restarts.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MAIN APP
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="app" class="app hidden">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Sidebar Header -->
+      <div class="sidebar-header">
+        <div class="sidebar-logo">💬 SnapMsg</div>
+        <div class="sidebar-header-actions">
+          <button class="icon-btn" id="new-group-btn" title="New Group (Ctrl+G)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </button>
+          <button class="icon-btn" id="search-global-btn" title="Search (Ctrl+F)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </button>
+          <button class="icon-btn" id="settings-btn" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 1.41 1.41M4.93 4.93a10 10 0 0 0-1.41 1.41M4.93 19.07a10 10 0 0 0 1.41 1.41M19.07 19.07a10 10 0 0 1-1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="sidebar-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="sidebar-search-input" placeholder="Search chats..." />
+        <button class="clear-search hidden" id="clear-search-btn">✕</button>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="chats">
+          Chats
+          <span class="tab-badge hidden" id="chats-badge">0</span>
+        </button>
+        <button class="sidebar-tab" data-tab="requests">
+          Requests
+          <span class="tab-badge hidden" id="requests-badge">0</span>
+        </button>
+        <button class="sidebar-tab" data-tab="people">People</button>
+      </div>
+
+      <!-- Chats List -->
+      <div class="sidebar-content" id="chats-tab">
+        <div class="chat-list" id="chat-list">
+          <div class="empty-state" id="chats-empty">
+            <div class="empty-icon">💬</div>
+            <p>No chats yet</p>
+            <span>Click a user to start chatting</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Friend Requests List -->
+      <div class="sidebar-content hidden" id="requests-tab">
+        <div class="requests-list" id="requests-list">
+          <div class="empty-state">
+            <div class="empty-icon">📬</div>
+            <p>No requests</p>
+            <span>Friend requests will appear here</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- People List -->
+      <div class="sidebar-content hidden" id="people-tab">
+        <div class="people-search-wrapper">
+          <div class="people-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="people-search-input" placeholder="Search users..." />
+          </div>
+        </div>
+        <div class="people-list" id="people-list">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <p>No one online yet</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer (User Profile) -->
+      <div class="sidebar-footer">
+        <div class="current-user" id="current-user-display">
+          <div class="avatar" id="my-avatar">?</div>
+          <div class="user-info">
+            <span class="user-display-name" id="my-display-name">Loading...</span>
+            <span class="user-username" id="my-username">@loading</span>
+          </div>
+          <div class="user-streak" id="my-streak" title="Message streak">🔥 0</div>
+        </div>
+        <div class="sidebar-footer-actions">
+          <button class="icon-btn" id="status-btn" title="Set status">
+            <span class="status-dot online" id="my-status-dot"></span>
+          </button>
+          <button class="icon-btn danger" id="logout-btn" title="Logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main Chat Area ──────────────────────────────────────── -->
+    <main class="chat-area" id="chat-area">
+
+      <!-- Welcome / No Chat Selected -->
+      <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-content">
+          <div class="welcome-icon">💬</div>
+          <h2>Welcome to SnapMsg</h2>
+          <p>Select a conversation or start a new one</p>
+          <div class="welcome-tips">
+            <div class="tip"><kbd>Ctrl</kbd>+<kbd>G</kbd> New group</div>
+            <div class="tip"><kbd>Ctrl</kbd>+<kbd>F</kbd> Search</div>
+            <div class="tip"><kbd>Esc</kbd> Close chat</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Chat -->
+      <div class="chat-window hidden" id="chat-window">
+
+        <!-- Chat Top Bar -->
+        <div class="chat-topbar">
+          <button class="icon-btn back-btn" id="back-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="chat-topbar-info" id="chat-topbar-info">
+            <div class="avatar" id="chat-avatar">?</div>
+            <div class="chat-topbar-text">
+              <span class="chat-topbar-name" id="chat-topbar-name">Chat</span>
+              <span class="chat-topbar-status" id="chat-topbar-status">online</span>
+            </div>
+          </div>
+          <div class="chat-topbar-actions">
+            <button class="icon-btn" id="search-chat-btn" title="Search messages (Ctrl+F)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+            <button class="icon-btn" id="pin-chat-btn" title="Pin chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L8.5 8.5 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21 17 14.14l5-4.87-6.5-.77z"/></svg>
+            </button>
+            <button class="icon-btn" id="disappear-btn" title="Disappearing messages">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+            <button class="icon-btn" id="chat-menu-btn" title="More options">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar in Chat -->
+        <div class="chat-search-bar hidden" id="chat-search-bar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="chat-search-input" placeholder="Search in conversation..." />
+          <span class="search-results-count" id="search-count"></span>
+          <button class="icon-btn" id="close-chat-search">✕</button>
+        </div>
+
+        <!-- Messages Container -->
+        <div class="messages-container" id="messages-container">
+          <div class="messages-list" id="messages-list"></div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator hidden" id="typing-indicator">
+          <div class="typing-bubble">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="typing-text" id="typing-text">Someone is typing...</span>
+        </div>
+
+        <!-- Reply Preview -->
+        <div class="reply-preview hidden" id="reply-preview">
+          <div class="reply-preview-bar"></div>
+          <div class="reply-preview-content">
+            <span class="reply-preview-sender" id="reply-preview-sender"></span>
+            <span class="reply-preview-text" id="reply-preview-text"></span>
+          </div>
+          <button class="icon-btn" id="cancel-reply-btn">✕</button>
+        </div>
+
+        <!-- Message Input Area -->
+        <div class="message-input-area">
+          <button class="icon-btn input-action-btn" id="emoji-btn" title="Emoji (Ctrl+E)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          <button class="icon-btn input-action-btn" id="image-btn" title="Send image">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <div class="message-input-wrapper">
+            <textarea
+              id="message-input"
+              placeholder="Message..."
+              rows="1"
+              maxlength="4000"
+              autocomplete="off"
+              spellcheck="true"
+            ></textarea>
+          </div>
+          <button class="icon-btn input-action-btn send-btn" id="send-btn" title="Send (Enter)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+          <input type="file" id="image-file-input" accept="image/*" class="hidden" />
+        </div>
+
+        <!-- Emoji Picker -->
+        <div class="emoji-picker-container hidden" id="emoji-picker-container">
+          <emoji-picker id="emoji-picker"></emoji-picker>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODALS
+  ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- New Group Modal -->
+  <div class="modal-overlay hidden" id="new-group-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Group Chat</h3>
+        <button class="icon-btn modal-close" data-modal="new-group-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label>Group Name</label>
+          <input type="text" id="group-name-input" placeholder="e.g. Study Squad" maxlength="40" />
+        </div>
+        <div class="input-group">
+          <label>Add Members</label>
+          <div class="member-search-wrapper">
+            <input type="text" id="member-search-input" placeholder="Search users..." />
+          </div>
+          <div class="member-list" id="member-list"></div>
+          <div class="selected-members" id="selected-members"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-modal="new-group-modal">Cancel</button>
+        <button class="btn-primary" id="create-group-btn">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Settings & Profile</h3>
+        <button class="icon-btn modal-close" data-modal="settings-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h4>Profile</h4>
+          <div class="input-group">
+            <label>Display Name</label>
+            <input type="text" id="settings-nickname" placeholder="Your display name" maxlength="32" />
+          </div>
+          <div class="input-group">
+            <label>Avatar Color</label>
+            <div class="color-swatches" id="settings-color-swatches"></div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4>Chat Theme</h4>
+          <div class="theme-grid" id="theme-grid">
+            <div class="theme-option active" data-theme="default">
+              <div class="theme-preview theme-preview-default"></div>
+              <span>Default</span>
+            </div>
+            <div class="theme-option" data-theme="midnight">
+              <div class="theme-preview theme-preview-midnight"></div>
+              <span>Midnight</span>
+            </div>
+            <div class="theme-option" data-theme="ocean">
+              <div class="theme-preview theme-preview-ocean"></div>
+              <span>Ocean</span>
+            </div>
+            <div class="theme-option" data-theme="forest">
+              <div class="theme-preview theme-preview-forest"></div>
+              <span>Forest</span>
+            </div>
+            <div class="theme-option" data-theme="sunset">
+              <div class="theme-preview theme-preview-sunset"></div>
+              <span>Sunset</span>
+            </div>
+            <div class="theme-option" data-theme="candy">
+              <div class="theme-preview theme-preview-candy"></div>
+              <span>Candy</span>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4>Notifications</h4>
+          <label class="toggle-label">
+            <span>Sound notifications</span>
+            <input type="checkbox" id="sound-toggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="toggle-label">
+            <span>Browser notifications</span>
+            <input type="checkbox" id="notif-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-section danger-zone">
+          <h4>Danger Zone</h4>
+          <button class="btn-danger" id="clear-all-btn">Clear All My Data</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-modal="settings-modal">Cancel</button>
+        <button class="btn-primary" id="save-settings-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Picker Dropdown -->
+  <div class="dropdown hidden" id="status-dropdown">
+    <button class="dropdown-item" data-status="online">
+      <span class="status-dot online"></span> Online
+    </button>
+    <button class="dropdown-item" data-status="idle">
+      <span class="status-dot idle"></span> Idle
+    </button>
+    <button class="dropdown-item" data-status="offline">
+      <span class="status-dot offline"></span> Appear Offline
+    </button>
+  </div>
+
+  <!-- Chat Context Menu -->
+  <div class="context-menu hidden" id="chat-context-menu">
+    <button class="context-item" data-action="pin">📌 Pin Chat</button>
+    <button class="context-item" data-action="clear">🗑️ Clear Chat</button>
+    <button class="context-item" data-action="leave">🚪 Leave Group</button>
+  </div>
+
+  <!-- Message Context Menu -->
+  <div class="context-menu hidden" id="message-context-menu">
+    <button class="context-item" data-action="reply">↩️ Reply</button>
+    <button class="context-item" data-action="react">😊 React</button>
+    <button class="context-item" data-action="edit">✏️ Edit</button>
+    <button class="context-item" data-action="delete">🗑️ Delete</button>
+    <button class="context-item" data-action="copy">📋 Copy</button>
+  </div>
+
+  <!-- Disappear Timer Dropdown -->
+  <div class="dropdown hidden" id="disappear-dropdown">
+    <div class="dropdown-header">Disappearing Messages</div>
+    <button class="dropdown-item" data-timer="0">Off</button>
+    <button class="dropdown-item" data-timer="10">10 seconds</button>
+    <button class="dropdown-item" data-timer="30">30 seconds</button>
+    <button class="dropdown-item" data-timer="60">1 minute</button>
+    <button class="dropdown-item" data-timer="300">5 minutes</button>
+  </div>
+
+  <!-- Reaction Picker Popup -->
+  <div class="reaction-picker hidden" id="reaction-picker">
+    <button class="reaction-btn" data-emoji="❤️">❤️</button>
+    <button class="reaction-btn" data-emoji="😂">😂</button>
+    <button class="reaction-btn" data-emoji="😮">😮</button>
+    <button class="reaction-btn" data-emoji="😢">😢</button>
+    <button class="reaction-btn" data-emoji="😡">😡</button>
+    <button class="reaction-btn" data-emoji="👍">👍</button>
+    <button class="reaction-btn" data-emoji="🔥">🔥</button>
+    <button class="reaction-btn" data-emoji="💯">💯</button>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Reconnecting Banner -->
+  <div class="reconnect-banner hidden" id="reconnect-banner">
+    <div class="reconnect-spinner"></div>
+    <span>Reconnecting...</span>
+  </div>
+
+  <!-- Screenshot Warning -->
+  <div class="screenshot-warning hidden" id="screenshot-warning">
+    <div class="screenshot-warning-content">
+      📸 Screenshot detected!
+    </div>
+  </div>
+
+  <!-- Notification Sound (hidden audio) -->
+  <audio id="notification-sound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq3EuJFuVz/3/sF8qHlCGw/n/p1QlGUF3tuz/n0slFDhsqeP/mEYhEDFjod7/kT8dDCpZmNj/ijoZCCNRjdD/hDUVBBxJg8n/fzAQABVBecP/ejsMAA9Bccz/dTgIAAtBaM3/cDUFAAdBX87/azICAARBV8//ZjAAAABBT9D/YS4AAABBSdH/XCsAAABBQ9L/VygAAABBPdP/UiUAAABBN9T/TSIAAABBN9X/SCAAAABBN9b/RCQAAABBN9f/QCMAAABBN9j/PCMAAABBN9n/OCMAAABBN9r/NCMAAABBN9v/MCMAAABBN9z/LCMAAABBN93/KCMAAABBN97/JCMAAABBN9//ICMAAABBN+D/HCMAAABBN+H/GCMAAABBN+L/FCMAAABBN+P/ECMAAABBN+T/DCMAAABBN+X/CCMAAABBN+b/BCMAAABBN+f/ACMAAABBN+j//CIAAA==" type="audio/wav" />
+  </audio>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
