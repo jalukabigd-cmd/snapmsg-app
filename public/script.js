@@ -1815,6 +1815,11 @@ function switchTab(tab) {
   $('requests-tab').classList.toggle('hidden', tab !== 'requests');
   $('people-tab').classList.toggle('hidden', tab !== 'people');
   if (tab === 'requests') renderRequestsList();
+  if (tab === 'people') {
+    // Refresh users list when switching to People tab
+    State.socket?.emit('users:get');
+    State.socket?.emit('friend:list');
+  }
 }
 
 // New group button
