@@ -34,6 +34,7 @@ const State = {
   editingMessageId: null,
   reconnectAttempts: 0,
   isReconnecting: false,
+  isFirstLogin: true,      // Track if this is the first login (not a reconnect)
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -287,7 +288,10 @@ function initSocket(userData) {
 
   socket.on('reconnect', () => {
     DOM.reconnectBanner.classList.add('hidden');
-    showToast('✅', 'Reconnected', 'Back online!', 'success');
+    // Only show reconnected toast if we were previously connected (not on first connect)
+    if (State.reconnectAttempts > 0) {
+      showToast('✅', 'Reconnected', 'Back online!', 'success');
+    }
     // Re-join current room if any
     if (State.currentRoom) {
       socket.emit('room:join', { roomId: State.currentRoom.id });
@@ -319,7 +323,11 @@ function initSocket(userData) {
     socket.emit('friend:list');
     updateRequestsBadge();
 
-    showToast('👋', 'Welcome back!', `Logged in as @${user.username}`, 'success');
+    // Only show welcome message on first login, not on reconnects
+    if (State.isFirstLogin) {
+      showToast('👋', 'Welcome back!', `Logged in as @${user.username}`, 'success');
+      State.isFirstLogin = false;
+    }
   });
 
   socket.on('auth:error', ({ message }) => {
